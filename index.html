@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moonshots — Live Pipeline</title>
+  <style>
+    :root {
+      --bg: #07070f;
+      --surface: #0f0f1c;
+      --surface-2: #16162a;
+      --border: rgba(255,255,255,0.07);
+      --text: #e2e2ee;
+      --muted: #5a5a7a;
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0c0c1e 0%, #160828 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #7c3aed, #4338ca);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .logo-name {
+      font-size: 19px; font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #818cf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .logo-sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .live-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.25);
+      border-radius: 20px; padding: 4px 10px; font-size: 11px; color: #34d399;
+    }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .ts { font-size: 11px; color: var(--muted); }
+
+    /* ── Stat strip ── */
+    .stat-strip {
+      display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+      overflow-x: auto; padding: 0 32px;
+    }
+    .stat { display: flex; align-items: center; gap: 7px; padding: 11px 18px; border-right: 1px solid var(--border); white-space: nowrap; }
+    .s-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .s-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .s-count { font-size: 13px; font-weight: 600; }
+
+    /* ── Main ── */
+    main { padding: 28px 32px; max-width: 1640px; margin: 0 auto; }
+
+    .region-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+    @media(max-width:920px){ .region-pair{ grid-template-columns:1fr; } main{ padding:20px 16px; } header{ padding:14px 16px; } .stat-strip{ padding:0 16px; } }
+
+    /* ── Section ── */
+    .section { margin-bottom: 4px; }
+    .sec-header { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+    .sec-flag { font-size: 16px; }
+    .sec-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+    .sec-badge {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 7px; font-size: 10px; color: var(--muted);
+    }
+    .sec-line { flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Cards ── */
+    .cards { display: flex; flex-direction: column; gap: 8px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 11px;
+      padding: 12px 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: rgba(124,58,237,.3); }
+    .card-left { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+    .card-num { font-size: 10px; color: var(--muted); font-family: monospace; white-space: nowrap; padding-top: 2px; }
+    .card-title { font-size: 12.5px; line-height: 1.55; color: var(--text); }
+
+    /* ── Status badge ── */
+    .sbadge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      cursor: pointer; border: none; white-space: nowrap; flex-shrink: 0;
+      transition: filter .15s, transform .1s;
+    }
+    .sbadge:hover { filter: brightness(1.2); transform: translateY(-1px); }
+    .sbadge:active { transform: translateY(0); }
+    .bdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+    .s-backlog    { background: rgba(107,114,128,.18); color: #9ca3af; }
+    .s-in-progress{ background: rgba(59,130,246,.15);  color: #60a5fa; }
+    .s-testing    { background: rgba(245,158,11,.15);  color: #fbbf24; }
+    .s-live       { background: rgba(16,185,129,.15);  color: #34d399; }
+    .s-done       { background: rgba(20,184,166,.15);  color: #2dd4bf; }
+    .s-blocked    { background: rgba(239,68,68,.15);   color: #f87171; }
+
+    /* ── Moonshot section ── */
+    .moonshot-wrap {
+      background: linear-gradient(135deg, rgba(124,58,237,.08), rgba(79,70,229,.08));
+      border: 1px solid rgba(124,58,237,.25);
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 28px;
+    }
+    .moonshot-wrap .sec-title { color: #a78bfa; }
+    .moonshot-wrap .sec-header::before {
+      content: ''; width: 3px; height: 15px;
+      background: linear-gradient(180deg, #7c3aed, #4338ca); border-radius: 2px;
+    }
+    .moonshot-wrap .card {
+      background: rgba(124,58,237,.08); border-color: rgba(124,58,237,.2);
+    }
+
+    /* ── CRM Overall ── */
+    .overall-wrap { margin-bottom: 28px; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 11px 15px; font-size: 13px;
+      transform: translateY(60px); opacity: 0; transition: all .3s cubic-bezier(.34,1.56,.64,1); z-index: 999;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Loading ── */
+    .loading { display: flex; align-items: center; justify-content: center; height: 180px; color: var(--muted); gap: 9px; }
+    .spin { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Config banner ── */
+    #cfg-banner {
+      background: rgba(245,158,11,.1); border-bottom: 1px solid rgba(245,158,11,.25);
+      padding: 10px 32px; font-size: 12px; color: #fbbf24; display: none;
+    }
+    #cfg-banner a { color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+<div id="cfg-banner">
+  ⚡ Running in <strong>local mode</strong> — changes only save in this browser.
+  To share live updates across your team, add your Firebase config.
+  <a href="https://console.firebase.google.com" target="_blank">Set up Firebase →</a>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚀</div>
+    <div>
+      <div class="logo-name">Moonshots</div>
+      <div class="logo-sub">Live Pipeline Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-pill"><div class="live-dot"></div> Live</div>
+    <div class="ts" id="ts">—</div>
+  </div>
+</header>
+
+<div class="stat-strip">
+  <div class="stat"><div class="s-dot" style="background:#6b7280"></div><span class="s-label">Backlog</span><span class="s-count" id="c-backlog">0</span></div>
+  <div class="stat"><div class="s-dot" style="background:#3b82f6"></div><span class="s-label">In Progress</span><span class="s-count" id="c-in-progress">0</span></div>
+  <div class="stat"><div class="s-dot" style="background:#f59e0b"></div><span class="s-label">Testing</span><span class="s-count" id="c-testing">0</span></div>
+  <div class="stat"><div class="s-dot" style="background:#10b981"></div><span class="s-label">Live</span><span class="s-count" id="c-live">0</span></div>
+  <div class="stat"><div class="s-dot" style="background:#ef4444"></div><span class="s-label">Blocked</span><span class="s-count" id="c-blocked">0</span></div>
+  <div class="stat"><div class="s-dot" style="background:#14b8a6"></div><span class="s-label">Done</span><span class="s-count" id="c-done">0</span></div>
+</div>
+
+<main id="main">
+  <div class="loading"><div class="spin"></div> Loading pipeline…</div>
+</main>
+
+<div id="toast"></div>
+
+<script type="module">
+  // ─────────────────────────────────────────────────────────────
+  //  FIREBASE CONFIG — paste your config object here to enable
+  //  real-time sync across the team.
+  //
+  //  1. Go to https://console.firebase.google.com
+  //  2. Create a project → Add a web app → copy the config
+  //  3. Enable Realtime Database (in "Build" menu)
+  //  4. Set database rules to:  { "rules": { ".read": true, ".write": true } }
+  //  5. Replace the placeholder below with your actual values
+  // ─────────────────────────────────────────────────────────────
+  const FIREBASE_CONFIG = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT.firebaseapp.com",
+    databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId:         "YOUR_PROJECT",
+    storageBucket:     "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+  // ─────────────────────────────────────────────────────────────
+
+  const STATUS_CYCLE  = ['backlog','in-progress','testing','live','done','blocked'];
+  const STATUS_LABEL  = { backlog:'Backlog', 'in-progress':'In Progress', testing:'Testing', live:'✦ Live', done:'Done', blocked:'⚠ Blocked' };
+
+  const SECTIONS = [
+    { key:'india-app',    label:'India — App',               flag:'🇮🇳', region:'india'   },
+    { key:'india-crm',    label:'India — CRM',               flag:'🇮🇳', region:'india'   },
+    { key:'foreign-app',  label:'Foreign — App',             flag:'🌍', region:'foreign' },
+    { key:'foreign-crm',  label:'Foreign — CRM',             flag:'🌍', region:'foreign' },
+    { key:'crm-overall',  label:'CRM Overall (IN + Foreign)', flag:'📊', region:'overall' },
+    { key:'moonshot',     label:'Moonshot',                  flag:'🚀', region:'moonshot'},
+  ];
+
+  const SEED = [
+    // India App
+    { id:'ia-1', cat:'india-app',   title:'All Referral traffic on abc2.0 — zero leaks target (HSM + Vernac)',                                                              status:'in-progress' },
+    { id:'ia-2', cat:'india-app',   title:'Horoscope UI changes + loveAstro-level Tarot Reading experience',                                                                status:'in-progress' },
+    { id:'ia-3', cat:'india-app',   title:'Nudge Experiment — HSM/Vernac user language ID mapping, Vernac priority order + different consultants',                          status:'in-progress' },
+    { id:'ia-4', cat:'india-app',   title:'Low Wallet Balance (<₹100) chat enablement — consultant mapping by user language ID',                                            status:'in-progress' },
+    { id:'ia-5', cat:'india-app',   title:'abc-compliance system instruction A/B — release + conclude with priority order (Varun)',                                         status:'in-progress' },
+    { id:'ia-6', cat:'india-app',   title:'Human Profiling upgrade — Learned Batch Release (Nandita, Mahima + iterated profiles)',                                         status:'in-progress' },
+    { id:'ia-7', cat:'india-app',   title:'Timing-optimised conversation experiment — high sync, rp-level chat, target 1 HSM',                                             status:'in-progress' },
+    // India CRM
+    { id:'ic-1', cat:'india-crm',   title:'RCS new bot integrations — India',                                                                                              status:'in-progress' },
+    { id:'ic-2', cat:'india-crm',   title:'RCS data Karix — India Acquisition',                                                                                            status:'in-progress' },
+    { id:'ic-3', cat:'india-crm',   title:'Puneet & Anuradha WhatsApp number integrations',                                                                                status:'in-progress' },
+    { id:'ic-4', cat:'india-crm',   title:'Pandit Ji integration',                                                                                                         status:'in-progress' },
+    // Foreign App
+    { id:'fa-1', cat:'foreign-app', title:'abc PO iterations — improve avg rating + PO to R1 for Native Users (Lumus + AT Native)',                                        status:'in-progress' },
+    { id:'fa-2', cat:'foreign-app', title:'NRI Referral — new abc2.0 profile launch (↑ avg duration, ↑ ARPU base)',                                                       status:'in-progress' },
+    { id:'fa-3', cat:'foreign-app', title:'Lumus + AT Native Referral — new abc2.0 profile launch (↑ avg duration, ↑ ARPU base)',                                         status:'in-progress' },
+    { id:'fa-4', cat:'foreign-app', title:'AI Astrologer Skill Consultant in List for new user traffic — close AI positioning + retire old profiles',                      status:'in-progress' },
+    // Foreign CRM
+    { id:'fc-1', cat:'foreign-crm', title:'RCS foreign integration (TAT ≤ 7 days)',                                                                                        status:'in-progress' },
+    { id:'fc-2', cat:'foreign-crm', title:'SMS foreign — Karix data campaign',                                                                                             status:'in-progress' },
+    { id:'fc-3', cat:'foreign-crm', title:'New vendor phone number purchase — testing',                                                                                    status:'in-progress' },
+    // CRM Overall
+    { id:'co-1', cat:'crm-overall', title:'User segmentation based on chat behaviour',                                                                                     status:'in-progress' },
+    { id:'co-2', cat:'crm-overall', title:'Pulse integrations and development',                                                                                            status:'in-progress' },
+    { id:'co-3', cat:'crm-overall', title:'Unpaid India WhatsApp — open problem statement',                                                                                status:'backlog'     },
+    // Moonshot
+    { id:'ms-1', cat:'moonshot',    title:'Hariram as Self-Improving Consultant — human-in-the-loop Slack approvals + Daily Analysis Publish',                             status:'in-progress' },
+  ];
+
+  // ── State ──────────────────────────────────────────────────
+  let items = {};       // id → item object
+  let firebaseMode = false;
+  let dbRef, onValueFn, updateFn, setFn, getFn;
+
+  // ── Firebase bootstrap (graceful fallback) ─────────────────
+  async function tryFirebase() {
+    if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') return false;
+    try {
+      const { initializeApp }                      = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      const { getDatabase, ref, onValue, update, set, get } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      const app = initializeApp(FIREBASE_CONFIG);
+      const db  = getDatabase(app);
+      dbRef      = ref(db, 'moonshots/items');
+      onValueFn  = onValue;
+      updateFn   = (id, data) => update(ref(db, `moonshots/items/${id}`), data);
+      setFn      = (data)     => set(dbRef, data);
+      getFn      = ()         => get(dbRef);
+      return true;
+    } catch (e) {
+      console.warn('Firebase init failed:', e);
+      return false;
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  const $  = id => document.getElementById(id);
+  const ts = () => {
+    const t = Date.now();
+    const vals = Object.values(items);
+    const latest = vals.reduce((m, i) => Math.max(m, i.at || 0), 0);
+    if (!latest) return '—';
+    const d = Date.now() - latest, m = Math.floor(d/60000);
+    if (m < 1)  return 'Updated just now';
+    if (m < 60) return `Updated ${m}m ago`;
+    const h = Math.floor(m/60);
+    if (h < 24) return `Updated ${h}h ago`;
+    return `Updated ${Math.floor(h/24)}d ago`;
+  };
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function nextStatus(s) {
+    return STATUS_CYCLE[(STATUS_CYCLE.indexOf(s) + 1) % STATUS_CYCLE.length];
+  }
+
+  function save(id) {
+    if (firebaseMode) {
+      updateFn(id, { status: items[id].status, at: Date.now() });
+    } else {
+      localStorage.setItem('moonshots', JSON.stringify(items));
+    }
+    $('ts').textContent = ts();
+  }
+
+  // ── Stats bar ──────────────────────────────────────────────
+  function refreshStats() {
+    const counts = { backlog:0, 'in-progress':0, testing:0, live:0, done:0, blocked:0 };
+    Object.values(items).forEach(i => { if (i.status in counts) counts[i.status]++; });
+    Object.entries(counts).forEach(([s, n]) => { const el = $(`c-${s}`); if (el) el.textContent = n; });
+  }
+
+  // ── Card ───────────────────────────────────────────────────
+  function makeCard(item, num) {
+    const s   = item.status || 'backlog';
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div class="card-left">
+        <span class="card-num">${num}</span>
+        <span class="card-title">${item.title}</span>
+      </div>
+      <button class="sbadge s-${s}" data-id="${item.id}">
+        <span class="bdot"></span>${STATUS_LABEL[s]}
+      </button>`;
+    div.querySelector('.sbadge').addEventListener('click', e => {
+      const btn = e.currentTarget;
+      const id  = btn.dataset.id;
+      const next = nextStatus(items[id].status);
+      items[id].status = next;
+      btn.className = `sbadge s-${next}`;
+      btn.innerHTML = `<span class="bdot"></span>${STATUS_LABEL[next]}`;
+      refreshStats();
+      showToast(`→ ${STATUS_LABEL[next]}`);
+      save(id);
+    });
+    return div;
+  }
+
+  // ── Section ────────────────────────────────────────────────
+  function makeSection(sec) {
+    const sItems = Object.values(items).filter(i => i.cat === sec.key);
+    const wrap   = document.createElement('div');
+    wrap.className = 'section';
+    wrap.innerHTML = `
+      <div class="sec-header">
+        <span class="sec-flag">${sec.flag}</span>
+        <span class="sec-title">${sec.label}</span>
+        <span class="sec-badge">${sItems.length}</span>
+        <div class="sec-line"></div>
+      </div>
+      <div class="cards" id="g-${sec.key}"></div>`;
+    const grid = wrap.querySelector(`#g-${sec.key}`);
+    sItems.forEach((item, i) => grid.appendChild(makeCard(item, i + 1)));
+    return wrap;
+  }
+
+  // ── Render ─────────────────────────────────────────────────
+  function render() {
+    const main = $('main');
+    main.innerHTML = '';
+
+    // India pair
+    const indiaRow = document.createElement('div');
+    indiaRow.className = 'region-pair';
+
+    // Foreign pair
+    const foreignRow = document.createElement('div');
+    foreignRow.className = 'region-pair';
+
+    // CRM Overall
+    const overallWrap = document.createElement('div');
+    overallWrap.className = 'overall-wrap';
+
+    // Moonshot
+    const msWrap = document.createElement('div');
+    msWrap.className = 'moonshot-wrap';
+
+    SECTIONS.forEach(sec => {
+      const el = makeSection(sec);
+      if      (sec.region === 'india')    indiaRow.appendChild(el);
+      else if (sec.region === 'foreign')  foreignRow.appendChild(el);
+      else if (sec.region === 'overall')  overallWrap.appendChild(el);
+      else if (sec.region === 'moonshot') msWrap.appendChild(el);
+    });
+
+    main.appendChild(indiaRow);
+    main.appendChild(foreignRow);
+    main.appendChild(overallWrap);
+    main.appendChild(msWrap);
+
+    refreshStats();
+    $('ts').textContent = ts();
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+  async function init() {
+    firebaseMode = await tryFirebase();
+
+    if (firebaseMode) {
+      // Seed if empty, then listen
+      const snap = await getFn();
+      if (!snap.exists()) {
+        const seed = {};
+        SEED.forEach(i => { seed[i.id] = { ...i, at: Date.now() }; });
+        await setFn(seed);
+      }
+      onValueFn(dbRef, snapshot => {
+        items = snapshot.val() || {};
+        render();
+      });
+    } else {
+      // localStorage fallback
+      $('cfg-banner').style.display = 'block';
+      const stored = localStorage.getItem('moonshots');
+      if (stored) {
+        items = JSON.parse(stored);
+      } else {
+        SEED.forEach(i => { items[i.id] = { ...i, at: Date.now() }; });
+        localStorage.setItem('moonshots', JSON.stringify(items));
+      }
+      render();
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
